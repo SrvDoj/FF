@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>typewell | Typing test in navy and white</title>
+<meta name="description" content="A distraction-free typing test with time, word-count and quote modes. Live WPM, CPM, accuracy and error tracking.">
+<meta name="theme-color" content="#071426">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071426'/%3E%3Crect x='14' y='20' width='36' height='24' rx='5' fill='none' stroke='%23fff' stroke-width='3'/%3E%3Crect x='20' y='36' width='24' height='3' rx='1.5' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#071426; --bg2:#0B1D33; --navy:#12345A; --white:#fff;
+  --text2:#B8C5D6; --muted:#7F93AD; --line:#23364D; --gray:#D5DDE8;
+  --err:#FF8E8E;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-type:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --fs:1.75rem; --lh:2.9rem;
+  --radius:12px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg);color:var(--white);font-family:var(--font-ui);line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,ul,dl,dd{margin:0}
+ul{padding:0;list-style:none}
+button{font:inherit;color:inherit}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid #8FB8FF;outline-offset:3px;border-radius:6px}
+kbd{font-family:var(--font-type);font-size:.78em;padding:.1em .45em;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;color:var(--text2);background:var(--bg2)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Header */
+.top{width:min(1100px,100% - 3rem);margin:0 auto;padding:1.5rem 0;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.logo{display:flex;align-items:center;gap:.7rem;text-decoration:none;font-weight:700;font-size:1.15rem;letter-spacing:-.01em;background:none;border:0;cursor:pointer;padding:0}
+.logo-mark{display:grid;place-items:center;width:36px;height:36px;border:1.5px solid var(--white);border-radius:10px}
+.logo-mark svg{width:20px;height:20px}
+.top-hint{color:var(--muted);font-size:.9rem}
+
+main{flex:1;width:min(1100px,100% - 3rem);margin:0 auto;display:flex;flex-direction:column;justify-content:center;padding-bottom:3rem}
+
+/* Config bar */
+.config{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.5rem 0;margin:0 auto 3rem;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:.35rem}
+.group{display:flex;align-items:center;gap:.15rem;padding:0 .35rem}
+.group + .group{border-left:1px solid var(--line)}
+.chip{background:none;border:0;border-radius:999px;padding:.5rem 1rem;color:var(--text2);font-size:.92rem;font-weight:600;cursor:pointer;transition:background .15s,color .15s}
+.chip:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.chip[aria-pressed="true"]{background:var(--white);color:var(--bg)}
+
+/* Stage */
+.live{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:1rem;min-height:3rem}
+.live-main{font-size:2.2rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.live-side{display:flex;gap:1.75rem;color:var(--text2);font-variant-numeric:tabular-nums;visibility:hidden}
+.running .live-side{visibility:visible}
+.live-side strong{color:var(--white);font-size:1.25rem;margin-right:.3rem}
+.quote-src{color:var(--text2);font-size:.95rem;margin-bottom:.75rem;min-height:1.4rem}
+
+.typing{position:relative;cursor:text}
+.viewport{height:calc(var(--lh)*3);overflow:hidden}
+.words{position:relative;display:flex;flex-wrap:wrap;font-family:var(--font-type);font-size:var(--fs);user-select:none;-webkit-user-select:none;transition:filter .15s}
+.word{height:var(--lh);line-height:var(--lh);margin-right:.65em;white-space:pre}
+.letter{color:var(--muted)}
+.letter.correct{color:var(--white)}
+.letter.incorrect,.letter.extra{color:var(--err)}
+.word.error{text-decoration:underline;text-decoration-color:var(--err);text-decoration-thickness:2px;text-underline-offset:.2em}
+.blind .letter.incorrect,.blind .letter.extra{color:var(--white)}
+.blind .word.error{text-decoration:none}
+.caret{position:absolute;left:0;top:0;width:2px;background:var(--white);border-radius:1px;transition:transform .09s ease-out;pointer-events:none}
+.caret.idle{animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.unfocused .words{filter:blur(5px)}
+.unfocused .caret{display:none}
+.focus-hint{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--white);font-weight:600;text-align:center;padding:1rem}
+.unfocused .focus-hint{display:flex}
+
+.actions{display:flex;justify-content:center;align-items:center;gap:1rem;margin-top:2.5rem}
+.btn{display:inline-flex;align-items:center;gap:.6rem;border-radius:999px;padding:.8rem 1.4rem;border:1px solid var(--line);background:var(--bg2);color:var(--white);font-weight:600;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{border-color:var(--text2)}
+.btn-primary{background:var(--white);color:var(--bg);border-color:var(--white)}
+.btn-primary:hover{background:#E3EAF4;border-color:#E3EAF4}
+.btn svg{width:18px;height:18px}
+
+/* Results */
+.results{width:100%}
+.res-top{display:grid;grid-template-columns:200px 1fr;gap:2rem;align-items:start}
+.big{display:grid;gap:1.5rem}
+.big dt{color:var(--text2);font-size:1rem}
+.big dd{font-size:4.2rem;font-weight:700;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.big dd small{font-size:1.4rem;color:var(--text2);font-weight:600;margin-left:.15em}
+.chart-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1rem .5rem;min-width:0}
+.chart-wrap svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:1.25rem;color:var(--text2);font-size:.85rem;padding:.25rem .5rem .5rem}
+.legend span::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:.45rem;vertical-align:middle;background:var(--white)}
+.legend .raw::before{background:var(--muted)}
+.legend .err::before{background:var(--err);width:8px;height:8px;border-radius:50%}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:.75rem;margin-top:1.5rem}
+.stat{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.1rem}
+.stat dt{color:var(--text2);font-size:.85rem}
+.stat dd{font-size:1.4rem;font-weight:700;margin-top:.15rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat dd#rChars{font-size:1.05rem;white-space:nowrap;line-height:2.1rem}
+.best{display:inline-block;margin-top:1.25rem;color:var(--text2);font-size:.95rem}
+.best b{color:var(--white)}
+.pb{display:inline-block;margin-left:.6rem;padding:.15rem .6rem;border-radius:999px;background:var(--white);color:var(--bg);font-size:.78rem;font-weight:700}
+.lists{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.5rem}
+.list-block h3{font-size:.95rem;color:var(--text2);font-weight:600;margin-bottom:.6rem}
+.tags{display:flex;flex-wrap:wrap;gap:.5rem}
+.tag{font-family:var(--font-type);font-size:.95rem;padding:.3rem .7rem;border:1px solid var(--line);border-radius:8px;background:var(--bg2)}
+.tag i{font-style:normal;color:var(--err);margin-left:.4rem}
+.none{color:var(--muted);font-size:.95rem}
+.res-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2rem}
+
+footer{width:min(1100px,100% - 3rem);margin:0 auto;padding:1.5rem 0 2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.88rem;display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;justify-content:space-between}
+footer span kbd{margin:0 .15rem}
+
+@media (max-width:900px){
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .res-top{grid-template-columns:1fr}
+  .big{grid-template-columns:1fr 1fr}
+}
+@media (max-width:640px){
+  :root{--fs:1.25rem;--lh:2.15rem}
+  .top,main,footer{width:min(1100px,100% - 2rem)}
+  .top-hint{display:none}
+  .config{border-radius:var(--radius);margin-bottom:2rem;width:100%}
+  .group{flex-wrap:wrap;justify-content:center;width:100%;padding:.15rem}
+  .group + .group{border-left:0;border-top:1px solid var(--line)}
+  .chip{padding:.5rem .8rem}
+  .live-main{font-size:1.7rem}
+  .live-side{gap:1rem;font-size:.9rem}
+  .live-side strong{font-size:1.05rem}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .big dd{font-size:3rem}
+  .lists{grid-template-columns:1fr}
+  .res-actions .btn{flex:1 1 100%;justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){
+  .caret{transition:none}.caret.idle{animation:none}.chip,.btn,.words{transition:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="logo" id="logo" type="button" aria-label="typewell, start a new test">
+    <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M7 14h10"/></svg></span>
+    typewell
+  </button>
+  <p class="top-hint">Touch typing practice. Eyes on the text, not the keys.</p>
+</header>
+
+<main id="app">
+  <div class="config" role="toolbar" aria-label="Test settings">
+    <div class="group" role="group" aria-label="Text options">
+      <button class="chip" type="button" data-toggle="punct" aria-pressed="false">punctuation</button>
+      <button class="chip" type="button" data-toggle="nums" aria-pressed="false">numbers</button>
+      <button class="chip" type="button" data-toggle="blind" aria-pressed="false" title="Hide error colouring until the test ends">blind</button>
+    </div>
+    <div class="group" role="group" aria-label="Test mode">
+      <button class="chip" type="button" data-mode="time" aria-pressed="true">time</button>
+      <button class="chip" type="button" data-mode="words" aria-pressed="false">words</button>
+      <button class="chip" type="button" data-mode="quote" aria-pressed="false">quote</button>
+    </div>
+    <div class="group" role="group" aria-label="Test length" id="amounts"></div>
+  </div>
+
+  <section id="stage" aria-label="Typing test">
+    <div class="live" aria-hidden="true">
+      <div class="live-main" id="liveMain">30</div>
+      <div class="live-side"><span><strong id="liveWpm">0</strong>wpm</span><span class="live-acc"><strong id="liveAcc">100</strong>% acc</span></div>
+    </div>
+    <p class="quote-src" id="quoteSrc" hidden></p>
+    <div class="typing unfocused" id="typing">
+      <div class="viewport"><div class="words" id="words" aria-hidden="true"></div></div>
+      <div class="focus-hint">Click here or press any key to start typing</div>
+      <input id="capture" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Typing input. Type the words shown. Tab or Escape restarts." style="position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px">
+    </div>
+    <div class="actions">
+      <button class="btn" id="restart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Restart <kbd>Tab</kbd></button>
+    </div>
+    <p class="sr-only" id="sr-status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="results" id="results" hidden aria-labelledby="res-title">
+    <h2 class="sr-only" id="res-title">Test results</h2>
+    <div class="res-top">
+      <dl class="big">
+        <div><dt>wpm</dt><dd id="rWpm">0</dd></div>
+        <div><dt>accuracy</dt><dd id="rAcc">0<small>%</small></dd></div>
+      </dl>
+      <div class="chart-wrap">
+        <div id="chart" role="img" aria-label="Chart of words per minute over time"></div>
+        <div class="legend" aria-hidden="true"><span>wpm</span><span class="raw">raw</span><span class="err">errors</span></div>
+      </div>
+    </div>
+    <dl class="stats">
+      <div class="stat"><dt>raw</dt><dd id="rRaw">0</dd></div>
+      <div class="stat"><dt>cpm</dt><dd id="rCpm">0</dd></div>
+      <div class="stat"><dt>errors</dt><dd id="rErr">0</dd></div>
+      <div class="stat"><dt>characters</dt><dd id="rChars" title="correct / incorrect / extra / missing">0</dd></div>
+      <div class="stat"><dt>time</dt><dd id="rTime">0s</dd></div>
+      <div class="stat"><dt>test</dt><dd id="rTest">time 30</dd></div>
+    </dl>
+    <p class="best" id="best"></p>
+    <div class="lists">
+      <div class="list-block"><h3>Mistyped keys</h3><div class="tags" id="rKeys"></div></div>
+      <div class="list-block"><h3>Mistyped words</h3><div class="tags" id="rWords"></div></div>
+    </div>
+    <div class="res-actions">
+      <button class="btn btn-primary" id="next" type="button">Next test <kbd>Enter</kbd></button>
+      <button class="btn" id="retry" type="button">Retry same text</button>
+      <button class="btn" id="practice" type="button">Practice mistakes only</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span><kbd>Tab</kbd> or <kbd>Esc</kbd> restart</span>
+  <span><kbd>Ctrl</kbd>+<kbd>Backspace</kbd> delete word</span>
+  <span><kbd>Enter</kbd> next test on the results screen</span>
+  <span>Independent project inspired by BlindTyping. Not affiliated.</span>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Data ---------- */
+var WORDS = ("the of and to in is you that it he was for on are as with his they at be this from have or by one had not but what all were when we there can an your which their said if do will each about how up out them then she many some so these would other into has her two like him see time could no make than first been its who now people my made over did down only way find use may water long little very after words called just where most know get through back much before go good new write our me man too any day same right look think also around another came come work three word must because does part even place well such here take why help put different away again off went old number great tell men say small every found still between name should home big give air line set own under read last never us left end along while might next sound below saw something thought both few those always looked show large often together asked house don't world going want school important until form food keep children feet land side without boy once animals life enough took sometimes four head above kind began almost live page got earth need far hand high year mother light country father let night picture being study second soon story since white ever paper hard near sentence better best across during today however sure knew try told young sun thing whole hear example heard several change answer room sea against top turned learn point city play toward five using himself usually").split(" ").filter(function(w){return w.indexOf("'")<0;});
+
+var QUOTES = [
+  {t:"Well done is better than well said.", a:"Benjamin Franklin"},
+  {t:"An investment in knowledge pays the best interest.", a:"Benjamin Franklin"},
+  {t:"Nothing great was ever achieved without enthusiasm.", a:"Ralph Waldo Emerson"},
+  {t:"The only thing we have to fear is fear itself.", a:"Franklin D. Roosevelt"},
+  {t:"It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness.", a:"Charles Dickens, A Tale of Two Cities"},
+  {t:"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.", a:"Jane Austen, Pride and Prejudice"},
+  {t:"To be, or not to be, that is the question.", a:"William Shakespeare, Hamlet"},
+  {t:"The journey of a thousand miles begins with a single step.", a:"Lao Tzu"},
+  {t:"Government of the people, by the people, for the people, shall not perish from the earth.", a:"Abraham Lincoln"},
+  {t:"The reports of my death are greatly exaggerated.", a:"Mark Twain"},
+  {t:"All that glitters is not gold.", a:"William Shakespeare, The Merchant of Venice"},
+  {t:"Call me Ishmael. Some years ago, never mind how long precisely, having little or no money in my purse, I thought I would sail about a little and see the watery part of the world.", a:"Herman Melville, Moby-Dick"}
+];
+
+var TIMES=[15,30,60,120], COUNTS=[10,25,50,100], MAX_EXTRA=10;
+
+/* ---------- Helpers ---------- */
+function $(id){return document.getElementById(id);}
+function rand(n){return Math.floor(Math.random()*n);}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+var store={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+
+/* ---------- Elements ---------- */
+var el={
+  typing:$('typing'),words:$('words'),capture:$('capture'),liveMain:$('liveMain'),liveWpm:$('liveWpm'),liveAcc:$('liveAcc'),
+  stage:$('stage'),results:$('results'),amounts:$('amounts'),quoteSrc:$('quoteSrc'),srStatus:$('sr-status'),app:$('app')
+};
+var caret=document.createElement('span'); caret.className='caret idle'; caret.setAttribute('aria-hidden','true');
+
+/* ---------- Config ---------- */
+var cfg={mode:'time',time:30,count:25,punct:false,nums:false,blind:false};
+try{var saved=JSON.parse(store.get('typewell.cfg')||'null'); if(saved){for(var k in cfg){if(k in saved)cfg[k]=saved[k];}}}catch(e){}
+if(TIMES.indexOf(cfg.time)<0)cfg.time=30; if(COUNTS.indexOf(cfg.count)<0)cfg.count=25;
+if(['time','words','quote'].indexOf(cfg.mode)<0)cfg.mode='time';
+
+/* ---------- State ---------- */
+var S={};          // test state
+var lastWords=null, custom=null, quoteMeta=null, timer=null, wordEls=[], lhPx=46;
+
+function resetState(){
+  S={phase:'idle',words:[],typed:[],cur:0,start:0,total:0,correct:0,incorrect:0,
+     keyMiss:{},wordMiss:{},samples:[],lastErrTotal:0,quote:null};
+}
+
+/* ---------- Word generation ---------- */
+var gen={sentStart:true,len:0,target:5};
+function genWords(count){
+  var out=[],last='';
+  for(var i=0;i<count;i++){
+    var w,isNum=false;
+    if(cfg.nums && Math.random()<0.14){isNum=true;w=String(rand(Math.random()<.5?100:10000));}
+    else{do{w=WORDS[rand(WORDS.length)];}while(w===last);}
+    last=w;
+    if(cfg.punct){
+      if(gen.sentStart && !isNum){w=w.charAt(0).toUpperCase()+w.slice(1);}
+      gen.sentStart=false; gen.len++;
+      if(gen.len>=gen.target){
+        w+=['.','.','.','?','!'][rand(5)]; gen.sentStart=true; gen.len=0; gen.target=4+rand(6);
+      }else if(Math.random()<0.12){w+=',';}
+      else if(Math.random()<0.03){w+=';';}
+    }
+    out.push(w);
+  }
+  return out;
+}
+
+/* ---------- Build / render ---------- */
+function createWordEl(i){
+  var s=document.createElement('span'); s.className='word'; s.innerHTML=wordHtml(i); return s;
+}
+function wordHtml(i){
+  var w=S.words[i], t=S.typed[i]||'', h='', k;
+  for(k=0;k<w.length;k++){
+    var c=k<t.length?(t.charAt(k)===w.charAt(k)?'correct':'incorrect'):'';
+    h+='<span class="letter'+(c?' '+c:'')+'">'+esc(w.charAt(k))+'</span>';
+  }
+  for(k=w.length;k<t.length;k++){h+='<span class="letter extra">'+esc(t.charAt(k))+'</span>';}
+  return h;
+}
+function renderWord(i){
+  var node=wordEls[i]; if(!node)return;
+  node.innerHTML=wordHtml(i);
+  node.classList.toggle('error', i<S.cur && S.typed[i]!==S.words[i]);
+}
+function buildDom(){
+  el.words.innerHTML=''; el.words.appendChild(caret); wordEls=[];
+  var frag=document.createDocumentFragment();
+  for(var i=0;i<S.words.length;i++){var n=createWordEl(i); wordEls.push(n); frag.appendChild(n);}
+  el.words.appendChild(frag);
+  el.words.style.transform='translateY(0)';
+}
+function appendWords(n){
+  var more=genWords(n), frag=document.createDocumentFragment();
+  for(var i=0;i<more.length;i++){
+    S.words.push(more[i]); S.typed.push('');
+    var node=createWordEl(S.words.length-1); wordEls.push(node); frag.appendChild(node);
+  }
+  el.words.appendChild(frag);
+}
+function updateScroll(){
+  var node=wordEls[S.cur]; if(!node)return;
+  lhPx=wordEls[0].getBoundingClientRect().height||lhPx;
+  var shift=Math.max(0,node.offsetTop-lhPx);
+  el.words.style.transform='translateY('+(-shift)+'px)';
+}
+function updateCaret(){
+  var node=wordEls[S.cur]; if(!node)return;
+  var letters=node.children, t=(S.typed[S.cur]||'').length, r, x;
+  if(!letters.length)return;
+  if(t<letters.length){r=letters[t].getBoundingClientRect();x=r.left;}
+  else{r=letters[letters.length-1].getBoundingClientRect();x=r.right;}
+  var wr=el.words.getBoundingClientRect();
+  caret.style.height=r.height+'px';
+  caret.style.transform='translate('+(x-wr.left)+'px,'+(r.top-wr.top)+'px)';
+}
+function refresh(){updateScroll();updateCaret();}
+
+/* ---------- Test lifecycle ---------- */
+function newTest(opts){
+  opts=opts||{};
+  clearInterval(timer);
+  resetState();
+  var prevQuote=quoteMeta; quoteMeta=null;
+  if(opts.words){S.words=opts.words.slice(); if(cfg.mode==='quote'&&!custom)quoteMeta=prevQuote;}
+  else if(custom){S.words=custom.slice();}
+  else if(cfg.mode==='quote'){
+    var q=QUOTES[rand(QUOTES.length)]; quoteMeta=q; S.words=q.t.split(' ').filter(Boolean);
+  }else{
+    gen={sentStart:true,len:0,target:4+rand(6)};
+    S.words=genWords(cfg.mode==='time'?90:cfg.count);
+  }
+  S.typed=S.words.map(function(){return '';});
+  el.results.hidden=true; el.stage.hidden=false; el.app.classList.remove('running');
+  document.body.classList.remove('running');
+  el.typing.classList.toggle('blind',cfg.blind);
+  if(cfg.mode==='quote'&&!custom&&quoteMeta){el.quoteSrc.hidden=false;el.quoteSrc.textContent='\u2014 '+quoteMeta.a;}
+  else if(custom){el.quoteSrc.hidden=false;el.quoteSrc.textContent='Practice session: words you mistyped';}
+  else{el.quoteSrc.hidden=true;}
+  caret.classList.add('idle');
+  buildDom(); updateLive(0);
+  if(document.activeElement!==el.capture){el.capture.focus({preventScroll:true});}
+  requestAnimationFrame(refresh);
+  el.srStatus.textContent='New test ready.';
+}
+
+function startTest(){
+  S.phase='running'; S.start=performance.now();
+  document.body.classList.add('running');
+  caret.classList.remove('idle');
+  timer=setInterval(tick,100);
+}
+
+function isTimed(){return cfg.mode==='time'&&!custom;}
+
+function tick(){
+  if(S.phase!=='running')return;
+  var elapsed=performance.now()-S.start, sec=Math.floor(elapsed/1000);
+  while(S.samples.length<sec){pushSample(elapsed);}
+  updateLive(elapsed);
+  if(isTimed() && elapsed>=cfg.time*1000){finish();}
+}
+
+function pushSample(elapsed){
+  var st=calc(elapsed), errs=S.incorrect-S.lastErrTotal; S.lastErrTotal=S.incorrect;
+  S.samples.push({t:S.samples.length+1,wpm:st.wpm,raw:st.raw,errors:errs});
+}
+
+/* ---------- Statistics (computed from real input) ---------- */
+function calc(elapsedMs){
+  var min=Math.max(elapsedMs,1)/60000, correctChars=0, typedChars=0, i, w, t;
+  for(i=0;i<S.cur;i++){
+    w=S.words[i]; t=S.typed[i]; typedChars+=t.length+1;
+    if(t===w)correctChars+=w.length+1;
+  }
+  w=S.words[S.cur]; t=S.typed[S.cur]||'';
+  if(w!==undefined){typedChars+=t.length; if(t.length&&w.indexOf(t)===0)correctChars+=t.length;}
+  return {wpm:correctChars/5/min,raw:typedChars/5/min,cpm:correctChars/min,correctChars:correctChars};
+}
+function accuracy(){return S.total?Math.round(S.correct/S.total*1000)/10:100;}
+
+function updateLive(elapsed){
+  var main;
+  if(isTimed()){main=Math.max(0,Math.ceil((cfg.time*1000-elapsed)/1000));}
+  else{main=Math.min(S.cur,S.words.length)+' / '+S.words.length;}
+  el.liveMain.textContent=main;
+  if(S.phase==='running'){
+    var st=calc(elapsed);
+    el.liveWpm.textContent=Math.round(st.wpm);
+    el.liveAcc.textContent=cfg.blind?'??':Math.round(accuracy());
+  }
+}
+
+/* ---------- Input handling ---------- */
+function typeChar(ch){
+  var w=S.words[S.cur], t=S.typed[S.cur];
+  if(t.length>=w.length+MAX_EXTRA)return;
+  S.total++;
+  var expected=w.charAt(t.length);
+  if(t.length<w.length && ch===expected){S.correct++;}
+  else{
+    S.incorrect++; S.wordMiss[w]=true;
+    if(t.length<w.length){S.keyMiss[expected]=(S.keyMiss[expected]||0)+1;}
+  }
+  S.typed[S.cur]=t+ch;
+  renderWord(S.cur);
+  var isLast=S.cur===S.words.length-1;
+  if(!isTimed() && isLast && S.typed[S.cur].length>=w.length){finish();return;}
+  updateCaret();
+}
+function commitWord(){
+  var t=S.typed[S.cur]; if(!t.length)return;
+  var w=S.words[S.cur];
+  S.total++;
+  if(t===w){S.correct++;}
+  else{
+    S.incorrect++; S.wordMiss[w]=true;
+    if(t.length<w.length){var m=w.charAt(t.length);S.keyMiss[m]=(S.keyMiss[m]||0)+1;}
+  }
+  S.cur++;
+  renderWord(S.cur-1);
+  if(isTimed() && S.words.length-S.cur<25){appendWords(40);}
+  refresh();
+}
+function backspace(wholeWord){
+  var t=S.typed[S.cur];
+  if(wholeWord){
+    if(t.length){S.typed[S.cur]='';renderWord(S.cur);updateCaret();}
+    return;
+  }
+  if(t.length){S.typed[S.cur]=t.slice(0,-1);renderWord(S.cur);updateCaret();}
+  else if(S.cur>0 && !cfg.blind && S.typed[S.cur-1]!==S.words[S.cur-1]){
+    S.cur--; renderWord(S.cur); refresh();
+  }
+}
+function inputChar(ch){
+  if(S.phase==='done')return;
+  if(S.phase==='idle')startTest();
+  if(ch===' ')commitWord(); else typeChar(ch);
+  if(S.phase==='running')updateLive(performance.now()-S.start);
+}
+
+function onKeyDown(e){
+  if(e.isComposing||e.key==='Unidentified'||e.keyCode===229)return; // mobile/IME: handled by 'input'
+  var k=e.key, ae=document.activeElement, onBtn=ae&&(ae.tagName==='BUTTON'||ae.tagName==='A');
+  if(k==='Tab'&&!e.shiftKey&&ae===el.capture){e.preventDefault();newTest();return;}
+  if(k==='Escape'){e.preventDefault();newTest();return;}
+  if(S.phase==='done'){
+    if(k==='Enter'&&!onBtn){e.preventDefault();newTest();}
+    return;
+  }
+  if(onBtn&&(k===' '||k==='Enter'))return;
+  if(k==='Backspace'){
+    e.preventDefault();
+    if(ae!==el.capture)el.capture.focus({preventScroll:true});
+    backspace(e.ctrlKey||e.altKey||e.metaKey);
+    return;
+  }
+  if(k.length===1&&!e.ctrlKey&&!e.metaKey){
+    e.preventDefault();
+    if(ae!==el.capture)el.capture.focus({preventScroll:true});
+    inputChar(k);
+  }
+}
+function resetCapture(){
+  el.capture.value=' ';
+  try{el.capture.setSelectionRange(1,1);}catch(e){}
+}
+function onInput(e){
+  if(S.phase==='done'){resetCapture();return;}
+  if(e.inputType==='deleteContentBackward'){backspace(false);}
+  else if(e.inputType==='deleteWordBackward'){backspace(true);}
+  else if(e.data){for(var i=0;i<e.data.length;i++)inputChar(e.data.charAt(i));}
+  resetCapture();
+}
+
+/* ---------- Finish & results ---------- */
+function finish(){
+  if(S.phase!=='running')return;
+  clearInterval(timer);
+  var elapsed=performance.now()-S.start;
+  if(isTimed())elapsed=Math.min(elapsed,cfg.time*1000);
+  S.phase='done';
+  var st=calc(elapsed);
+  var secs=elapsed/1000;
+  if(!S.samples.length||S.samples[S.samples.length-1].t<secs-0.05){
+    var errs=S.incorrect-S.lastErrTotal;
+    S.samples.push({t:Math.round(secs*10)/10,wpm:st.wpm,raw:st.raw,errors:errs});
+  }
+  lastWords=S.words.slice();
+  showResults(st,secs);
+}
+
+function charBreakdown(){
+  var c=0,inc=0,ext=0,mis=0,last=Math.min(S.cur,S.words.length-1);
+  for(var i=0;i<=last;i++){
+    var w=S.words[i],t=S.typed[i]||'';
+    if(!t.length&&i===S.cur)continue;
+    for(var k=0;k<t.length;k++){
+      if(k>=w.length)ext++; else if(t.charAt(k)===w.charAt(k))c++; else inc++;
+    }
+    if(i<S.cur && t.length<w.length)mis+=w.length-t.length;
+  }
+  return [c,inc,ext,mis];
+}
+
+function modeLabel(){
+  if(custom)return 'practice '+S.words.length;
+  if(cfg.mode==='time')return 'time '+cfg.time;
+  if(cfg.mode==='words')return 'words '+cfg.count;
+  return 'quote';
+}
+function bestKey(){return 'typewell.best.'+(custom?'practice':cfg.mode+(cfg.mode==='time'?cfg.time:cfg.mode==='words'?cfg.count:''))+'.'+(cfg.punct?'p':'')+(cfg.nums?'n':'');}
+
+function showResults(st,secs){
+  el.stage.hidden=true; el.results.hidden=false;
+  document.body.classList.remove('running');
+  var wpm=Math.round(st.wpm), acc=accuracy();
+  $('rWpm').textContent=wpm;
+  $('rAcc').innerHTML=(Math.round(acc*10)/10)+'<small>%</small>';
+  $('rRaw').textContent=Math.round(st.raw);
+  $('rCpm').textContent=Math.round(st.cpm);
+  $('rErr').textContent=S.incorrect;
+  $('rChars').textContent=charBreakdown().join(' / ');
+  $('rTime').textContent=(isTimed()?cfg.time:Math.round(secs*10)/10)+'s';
+  $('rTest').textContent=modeLabel()+(cfg.punct?' +punct':'')+(cfg.nums?' +nums':'')+(cfg.blind?' blind':'');
+
+  var key=bestKey(), prev=parseFloat(store.get(key)), isPb=isNaN(prev)||wpm>prev;
+  if(isPb&&wpm>0)store.set(key,String(wpm));
+  $('best').innerHTML='Personal best for this setup: <b>'+Math.round(isPb&&wpm>0?wpm:prev)+' wpm</b>'+(isPb&&wpm>0?'<span class="pb">New best</span>':'');
+
+  var keys=Object.keys(S.keyMiss).sort(function(a,b){return S.keyMiss[b]-S.keyMiss[a];}).slice(0,10);
+  $('rKeys').innerHTML=keys.length?keys.map(function(k){return '<span class="tag">'+(k===' '?'space':esc(k))+'<i>\u00d7'+S.keyMiss[k]+'</i></span>';}).join(''):'<span class="none">None. Clean run.</span>';
+  var mw=Object.keys(S.wordMiss);
+  $('rWords').innerHTML=mw.length?mw.slice(0,14).map(function(w){return '<span class="tag">'+esc(w)+'</span>';}).join('')+(mw.length>14?'<span class="none">+'+(mw.length-14)+' more</span>':''):'<span class="none">None. Clean run.</span>';
+  $('practice').hidden=!mw.length;
+  S.mistakenList=mw;
+
+  drawChart(S.samples);
+  el.srStatus.textContent='Test finished. '+wpm+' words per minute, '+acc+' percent accuracy.';
+  $('next').focus({preventScroll:true});
+  window.scrollTo(0,0);
+}
+
+function drawChart(s){
+  var W=760,H=230,pl=44,pr=14,pt=14,pb=30,iw=W-pl-pr,ih=H-pt-pb;
+  var maxV=20;
+  s.forEach(function(p){maxV=Math.max(maxV,p.wpm,p.raw);});
+  maxV=Math.ceil(maxV/20)*20;
+  var n=s.length, maxT=Math.max(s[n-1].t,1);
+  function X(t){return pl+(n>1?t/maxT*iw:iw/2);}
+  function Y(v){return pt+ih-(v/maxV)*ih;}
+  var g='',i;
+  for(i=0;i<=4;i++){
+    var v=maxV/4*i,y=Y(v);
+    g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y+'" y2="'+y+'" stroke="#23364D" stroke-width="1"/>'+
+       '<text x="'+(pl-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#B8C5D6" font-size="12">'+Math.round(v)+'</text>';
+  }
+  var step=Math.max(1,Math.ceil(maxT/8));
+  for(i=0;i<=maxT;i+=step){
+    g+='<text x="'+X(i)+'" y="'+(H-8)+'" text-anchor="middle" fill="#B8C5D6" font-size="12">'+i+'s</text>';
+  }
+  function path(key){return s.map(function(p,j){return (j?'L':'M')+X(p.t).toFixed(1)+' '+Y(p[key]).toFixed(1);}).join(' ');}
+  var body='';
+  if(n>1){
+    body+='<path d="'+path('raw')+'" fill="none" stroke="#7F93AD" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>';
+    body+='<path d="'+path('wpm')+'" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+  }else{
+    body+='<circle cx="'+X(s[0].t)+'" cy="'+Y(s[0].raw)+'" r="4" fill="#7F93AD"/><circle cx="'+X(s[0].t)+'" cy="'+Y(s[0].wpm)+'" r="5" fill="#fff"/>';
+  }
+  s.forEach(function(p){
+    if(p.errors>0){body+='<circle cx="'+X(p.t)+'" cy="'+(pt+ih-6)+'" r="'+Math.min(3+p.errors,7)+'" fill="#FF8E8E"/>';}
+  });
+  $('chart').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">'+g+body+'</svg>';
+}
+
+/* ---------- Config UI ---------- */
+function renderAmounts(){
+  var box=el.amounts, list=cfg.mode==='time'?TIMES:cfg.mode==='words'?COUNTS:[];
+  box.hidden=!list.length;
+  box.innerHTML='';
+  list.forEach(function(n){
+    var b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n;
+    b.setAttribute('data-amount',n);
+    b.setAttribute('aria-pressed',String((cfg.mode==='time'?cfg.time:cfg.count)===n));
+    b.setAttribute('aria-label',n+(cfg.mode==='time'?' seconds':' words'));
+    box.appendChild(b);
+  });
+}
+function syncConfigUI(){
+  ['punct','nums','blind'].forEach(function(k){
+    document.querySelector('[data-toggle="'+k+'"]').setAttribute('aria-pressed',String(cfg[k]));
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'),function(b){
+    b.setAttribute('aria-pressed',String(b.getAttribute('data-mode')===cfg.mode));
+  });
+  renderAmounts();
+  el.typing.classList.toggle('blind',cfg.blind);
+  store.set('typewell.cfg',JSON.stringify(cfg));
+}
+function configChanged(){custom=null;syncConfigUI();newTest();}
+
+document.querySelector('.config').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b)return;
+  if(b.hasAttribute('data-toggle')){var k=b.getAttribute('data-toggle');cfg[k]=!cfg[k];}
+  else if(b.hasAttribute('data-mode')){cfg.mode=b.getAttribute('data-mode');}
+  else if(b.hasAttribute('data-amount')){var n=parseInt(b.getAttribute('data-amount'),10);if(cfg.mode==='time')cfg.time=n;else cfg.count=n;}
+  else return;
+  configChanged();
+});
+
+/* ---------- Buttons & focus ---------- */
+$('restart').addEventListener('click',function(){newTest();});
+$('logo').addEventListener('click',function(){custom=null;newTest();});
+$('next').addEventListener('click',function(){custom=null;newTest();});
+$('retry').addEventListener('click',function(){newTest({words:lastWords});});
+$('practice').addEventListener('click',function(){
+  if(S.mistakenList&&S.mistakenList.length){
+    var list=S.mistakenList.slice(), out=[];
+    while(out.length<Math.max(10,list.length)){out=out.concat(list);} // repeat so there is enough to type
+    custom=out.slice(0,Math.max(10,list.length));
+    newTest();
+  }
+});
+el.typing.addEventListener('mousedown',function(e){e.preventDefault();el.capture.focus({preventScroll:true});});
+el.typing.addEventListener('touchstart',function(){el.capture.focus({preventScroll:true});},{passive:true});
+el.capture.addEventListener('focus',function(){el.typing.classList.remove('unfocused');resetCapture();});
+el.capture.addEventListener('blur',function(){if(S.phase!=='done')el.typing.classList.add('unfocused');});
+el.capture.addEventListener('input',onInput);
+document.addEventListener('keydown',onKeyDown);
+window.addEventListener('resize',function(){if(S.phase!=='done')refresh();});
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){if(S.phase!=='done')refresh();});}
+
+/* ---------- Go ---------- */
+resetState(); syncConfigUI(); newTest();
+
+/* Test hook (read-only helpers for automated checks) */
+window.__typewell={state:function(){return S;},cfg:cfg};
+})();
+</script>
+</body>
+</html>
